@@ -13,49 +13,85 @@
             background: #f5f5f5;
         }
         h1 { color: #333; text-align: center; }
-        .container {
-            display: flex;
-            gap: 20px;
+        .upload-area {
+            border: 3px dashed #4CAF50;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: white;
+            cursor: pointer;
+            margin-bottom: 20px;
         }
+        .upload-area:hover { background: #f0fff0; }
+        .upload-area input { display: none; }
+        .upload-area p { font-size: 18px; color: #666; }
+        .container { display: flex; gap: 20px; }
         textarea {
             width: 100%;
             height: 300px;
             font-family: monospace;
-            font-size: 14px;
+            font-size: 13px;
             padding: 10px;
             border: 1px solid #ccc;
             border-radius: 8px;
         }
+        .buttons { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
         button {
-            display: block;
-            margin: 20px auto;
-            padding: 12px 40px;
-            background: #4CAF50;
-            color: white;
+            padding: 12px 30px;
             border: none;
             border-radius: 8px;
-            font-size: 18px;
+            font-size: 16px;
             cursor: pointer;
+            color: white;
         }
-        button:hover { background: #45a049; }
+        .btn-convert { background: #4CAF50; }
+        .btn-download { background: #2196F3; display: none; }
+        .btn-convert:hover { background: #45a049; }
+        .btn-download:hover { background: #1976D2; }
         label { font-weight: bold; display: block; margin-bottom: 5px; }
+        #filename { color: #4CAF50; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
     <h1>🔄 XML → JSON Конвертор</h1>
+
+    <div class="upload-area" onclick="document.getElementById('fileInput').click()">
+        <input type="file" id="fileInput" accept=".xml" onchange="loadFile(event)">
+        <p>📂 Кликни тук или провлачи XML файл</p>
+        <div id="filename"></div>
+    </div>
+
     <div class="container">
         <div style="flex:1">
-            <label>Въведи XML:</label>
-            <textarea id="xmlInput" placeholder="Постави XML тук..."></textarea>
+            <label>XML съдържание:</label>
+            <textarea id="xmlInput" placeholder="XML ще се появи тук след upload..."></textarea>
         </div>
         <div style="flex:1">
             <label>Резултат JSON:</label>
             <textarea id="jsonOutput" readonly placeholder="JSON ще се появи тук..."></textarea>
         </div>
     </div>
-    <button onclick="convert()">🔄 Конвертирай</button>
+
+    <div class="buttons">
+        <button class="btn-convert" onclick="convert()">🔄 Конвертирай</button>
+        <button class="btn-download" id="downloadBtn" onclick="downloadJSON()">⬇️ Свали JSON</button>
+    </div>
 
     <script>
+        let originalFilename = "output";
+
+        function loadFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            originalFilename = file.name.replace(".xml", "");
+            document.getElementById("filename").textContent = "✅ Зареден: " + file.name;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                document.getElementById("xmlInput").value = e.target.result;
+            };
+            reader.readAsText(file);
+        }
+
         function xmlToJson(xml) {
             const obj = {};
             if (xml.nodeType === 1 && xml.attributes.length > 0) {
@@ -85,15 +121,11 @@
 
         function convert() {
             const xmlStr = document.getElementById("xmlInput").value;
-            if (!xmlStr.trim()) {
-                alert("Моля въведи XML!");
-                return;
-            }
+            if (!xmlStr.trim()) { alert("Моля качи XML файл!"); return; }
             try {
                 const parser = new DOMParser();
                 const xmlDoc = parser.parseFromString(xmlStr, "text/xml");
-                const errorNode = xmlDoc.querySelector("parsererror");
-                if (errorNode) {
+                if (xmlDoc.querySelector("parsererror")) {
                     document.getElementById("jsonOutput").value = "❌ Невалиден XML!";
                     return;
                 }
@@ -101,9 +133,19 @@
                 const result = {};
                 result[xmlDoc.documentElement.nodeName] = json;
                 document.getElementById("jsonOutput").value = JSON.stringify(result, null, 4);
+                document.getElementById("downloadBtn").style.display = "block";
             } catch (e) {
                 document.getElementById("jsonOutput").value = "❌ Грешка: " + e.message;
             }
+        }
+
+        function downloadJSON() {
+            const json = document.getElementById("jsonOutput").value;
+            const blob = new Blob([json], { type: "application/json" });
+            const a = document.createElement("a");
+            a.href = URL.createObjectURL(blob);
+            a.download = originalFilename + ".json";
+            a.click();
         }
     </script>
 </body>
